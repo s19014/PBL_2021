@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+  <meta charset="utf-8">
+  <title>那覇市コインパーキング</title>
+
+  <!-- googlemapsのスタイル -->
+  <style>
+    #map {
+      height: 100%;
+    }
+
+    #input-box {
+      width: 80%;
+      height: 40px;
+      font-size: 16px;
+      margin-top: 20px;
+      border: 1px solid #ddd;
+      border-radius: 3px;
+    }
+
+    html,
+    body {
+      height: 90%;
+      margin: 0;
+      padding: 0;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div>那覇市コインパーキング</div>
+
+  <div id="map"></div>
+
+  <!-- Google Maps APIを読み込むための記述 -->
+  <!-- 「callback」はAPIの読み込みが終わった後で呼び出される関数 -->
+  <script async defer
+    src="https://maps.googleapis.com/maps/api/js?key=APIキーを入れる&callback=initMap">
+    </script>
+
+  <!-- 実際に表示するためのスクリプト。 -->　
+  <script type="text/javascript">
+    var map;
+    var gpos;
+
+    function initMap() {
+      //マップを生成
+      map = new google.maps.Map(document.getElementById('map'), {
+        //初期設定。
+        zoom: 15,
+        center: new google.maps.LatLng(26.2192994, 127.6996011),　// 那覇市
+        scrollwheel: true, // マウスでスクロールできる。falseにするとできなくなる
+        mapTypeId: google.maps.MapTypeId.ROADMAP
+      });
+      //jsonデータを読み込み
+      var script = document.createElement('script');
+      script.src = './js/data001.js';
+      document.getElementsByTagName('head')[0].appendChild(script);
+
+      //情報ウィンドウのインスタンスの生成
+      var infoWindow = new google.maps.InfoWindow;
+
+      //ブラウザが Geolocation に対応しているかを判定
+      //対応していない場合の処理
+      if (!navigator.geolocation) {
+        //情報ウィンドウの位置をマップの中心位置に指定
+        infoWindow.setPosition(map.getCenter());
+        //情報ウィンドウのコンテンツを設定
+        infoWindow.setContent('Geolocation に対応していません。');
+        //情報ウィンドウを表示
+        infoWindow.open(map);
+      }
+
+      //ブラウザが対応している場合、position にユーザーの位置情報が入る
+      navigator.geolocation.getCurrentPosition(function (position) {
+        // ここは実際の位置情報を取得する。発表の時はおもろまち駅の緯度と経度にしている。
+        gpos = {
+          lat: 26.2228329,
+          lng: 127.6983601
+        }
+        //情報ウィンドウに現在位置を指定
+        infoWindow.setPosition(gpos);
+        //情報ウィンドウのコンテンツを設定
+        infoWindow.setContent('現在位置を取得しました。');
+        //情報ウィンドウを表示
+        infoWindow.open(map);
+        //マップの中心位置を指定
+        map.setCenter(gpos);
+        var marker = new google.maps.Marker({
+          position: gpos,
+          map: map,
+          icon: './images/ichi2.png'
+        });
+      }, function () {  //位置情報の取得をユーザーがブロックした場合のコールバック
+        //情報ウィンドウの位置をマップの中心位置に指定
+        infoWindow.setPosition(map.getCenter());
+        //情報ウィンドウのコンテンツを設定
+        infoWindow.setContent('Error: Geolocation が無効です。');
+        //情報ウィンドウを表示
+        infoWindow.open(map);
+      });
+    }
+
+    window.feed_callback = function (results) {
+      //マップにピンを生成
+      for (var i = 0; i < results.data.length; i++) {
+        var latLng = new google.maps.LatLng(results.data[i].lat, results.data[i].lng); // latは緯度。lngは経度。
+        var iconFee; //ピン画像URLを入れる変数
+        var dis_parkName = results.data[i].parkName;　// 駐車場名
+        var dis_address = results.data[i].address; // 住所
+        var dis_fee = results.data[i].fee; // 料金
+        var dis_maxFee = results.data[i].maxFee; // 最大時間料金
+        var dis_numUnits = results.data[i].numUnits; // 駐車できる台数
+        var dis_pay = results.data[i].pay; // 支払い方法
+        if (results.data[i].disFee == 100.0) {
+          iconFee = './images/pay100.png';
+        }
+        if (results.data[i].disFee == 200.0) {
+          iconFee = './images/pay200.png';
+        }
+        if (results.data[i].disFee == 300.0) {
+          iconFee = './images/pay300.png';
+        }
+
+        // データがなかったら空白1文字を代わりに入れている。
+        if (results.data[i].parkName == undefined) {
+          dis_parkName = " ";
+        }
+
+        if (results.data[i].address == undefined) {
+          dis_address = " ";
+        }
+
+        if (results.data[i].fee == undefined) {
+          dis_fee = " ";
+        }
+
+        if (results.data[i].maxFee == undefined) {
+          dis_maxFee = " ";
+        }
+
+        if (results.data[i].numUnits == undefined) {
+          dis_numUnits = " ";
+        }
+
+        if (results.data[i].pay == undefined) {
+          dis_pay = " ";
+        }
+
+        var marker = new google.maps.Marker({
+          position: latLng,
+          map: map,
+          icon: new google.maps.MarkerImage(
+            iconFee,//マーカー画像URL
+            new google.maps.Size(50, 50),//マーカー画像のサイズ
+          ),
+        });
+        //吹き出しの中身の文言を引数で送る。
+        var contents =
+          '<div>駐車場名: <b>' + dis_parkName + '</b></div><br />' +
+          '<div>住所: <b>' + dis_address + '</b></div><br />' +
+          '<div>料金: <b>' + dis_fee + '</b></div><br />' +
+          '<div>最高料金: <b>' + dis_maxFee + '</b></div><br />' +
+          '<div>駐車台数: <b>' + dis_numUnits + '</b>台</div><br />' +
+          '<div>支払い方法: <b>' + dis_pay + '</b></div><br />' +
+          '<input type="button" value="ルート検索" onclick="route(' + results.data[i].lat + ',' + results.data[i].lng + ',' + 0 + ')" />' +
+          '<input type="button" value="終了" onclick="route(' + results.data[i].lat + ',' + results.data[i].lng + ',' + 1 + ')" />';
+        attachMessage(marker, contents);
+      }
+    }
+
+    //マーカーをクリックしたときに、吹き出しを出す。
+    function attachMessage(marker, msg) {
+      google.maps.event.addListener(marker, 'click', function (event) {
+        new google.maps.InfoWindow({
+          content: msg
+        }).open(marker.getMap(), marker);
+      });
+    }
+
+    var obj_route;
+
+    function route(Lat, Lng, f) {
+      var flg = f;
+      var latLng = new google.maps.LatLng(Lat, Lng); // latは緯度。lngは経度。
+      var genzaichi = new google.maps.LatLng(gpos.lat, gpos.lng); // 現在地
+      var directionsService = new google.maps.DirectionsService();
+      var directionsRenderer = new google.maps.DirectionsRenderer();
+      var request = {
+        origin: genzaichi, //スタート地点
+        destination: latLng, //ゴール地点
+        travelMode: google.maps.DirectionsTravelMode.DRIVING, // 移動手段は車移動
+      };
+
+      directionsService.route(request, function (result, status) {
+        if (status == google.maps.DirectionsStatus.OK) {
+          if (flg == 0) {
+            directionsRenderer.setOptions({
+              preserveViewport: true, //ズーム率を変更してルート全体を表示しない
+              suppressMarkers: false,
+              suppressPolylines: false
+            });
+            directionsRenderer.setDirections(result);
+            directionsRenderer.setMap(map);
+            obj_route = directionsRenderer;
+          } else {
+            obj_route.setMap(null);
+            console.log("test");
+          }
+        }
+      });
+    }
+  </script>
+
+  <br />
+  <input type="button" value="現在地を再取得" onclick="window.location.reload();" />
+</body>
+
+</html>
